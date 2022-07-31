@@ -1,2 +1,2 @@
 # wavsplitter
- Split wav files based on silence
+ Drag and drop command line utility to split a wave file based on silence.
