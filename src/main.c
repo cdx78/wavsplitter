@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <Shlwapi.h>
 
 #define FALSE 0
 #define TRUE 1
-#define SILENCE_BUFFER 128
+#define SILENCE_BUFFER 1024
 #define ERROR_NOFILE "usage: wavsplitter.exe (filename).wav\n"
 
 /***************************************************************************************
@@ -36,9 +37,11 @@ int argc;
 char *argv[];
 {
 	char s_byte[4];
-	char filename[64];
+	char filename[MAX_PATH];
+	char filename_out[MAX_PATH];
 	char *s_data;
 	unsigned int fileindex;
+	unsigned int finished;
 	unsigned int i, j;
 	unsigned int locked;
 	unsigned int s_buff;
@@ -47,6 +50,10 @@ char *argv[];
 	FILE *fp_in, *fp_out;
 
 	if (argc >= 2) {
+		memcpy(filename, argv[1], MAX_PATH);
+		PathStripPathA(filename);
+		PathRemoveExtensionA(filename);
+		strcat(filename, "_%04d.wav");
 		/* open up the original file for read access in byte mode */
 		if ((fp_in = fopen(argv[1], "rb")) == NULL) {
 			printf(ERROR_NOFILE);
@@ -71,6 +78,7 @@ char *argv[];
 		h_out.dat_a = h_in.dat_a;
 		h_out.dat_b = 0;
 		/* initialize values before entering the loop */
+		finished = FALSE;
 		locked = FALSE;
 		s_buff = 0;
 		/* open up the first output file */
@@ -90,8 +98,8 @@ char *argv[];
 			}
 			if (locked) {
 				if (h_out.dat_b == 0) {
-					sprintf(filename, "output%04d.wav", fileindex);
-					fp_out = fopen(filename, "wb");
+					sprintf(filename_out, filename, fileindex);
+					fp_out = fopen(filename_out, "wb");
 				}
 				memcpy(&s_data[h_out.dat_b], s_byte, h_in.fmt_g);
 				h_out.dat_b += h_in.fmt_g;
@@ -100,13 +108,21 @@ char *argv[];
 				else
 					s_buff = 0;
 				if (s_buff >= SILENCE_BUFFER) {
-					h_out.dat_b -= (SILENCE_BUFFER * h_in.fmt_g);
+					finished = TRUE;
+				}
+				if (i == (h_in.dat_b - 1)) {
+					finished = TRUE;
+				}
+				if (finished) {
+					h_out.dat_b -= (s_buff * h_in.fmt_g);
 					h_out.rif_b = 4 + (8 + h_out.fmt_b) + (8 + h_out.dat_b);
 					fwrite(&h_out, sizeof(struct wav_header), 1, fp_out);
 					fwrite(s_data, sizeof(char), h_out.dat_b, fp_out);
 					fclose(fp_out);
+					fp_out = NULL;
 					h_out.rif_b = 0;
 					h_out.dat_b = 0;
+					finished = FALSE;
 					locked = FALSE;
 					s_buff = 0;
 					fileindex += 1;
@@ -114,7 +130,9 @@ char *argv[];
 			}
 		}
 		fclose(fp_in);
-		fclose(fp_out);
+		if (fp_out != NULL) {
+			fclose(fp_out);
+		}
 		free(s_data);
 	}
 	else {
