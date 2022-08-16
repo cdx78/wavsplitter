@@ -32,9 +32,7 @@ struct wav_header {
 	unsigned int       dat_b; /* Number of bytes after header */
 };
 
-main(argc, argv)
-int argc;
-char *argv[];
+int main(int argc, char *argv[])
 {
 	char s_byte[4];
 	char filename[MAX_PATH];
@@ -62,7 +60,7 @@ char *argv[];
 		/* read the wave header from the original file */
 		fread(&h_in, sizeof(struct wav_header), 1, fp_in);
 		/* allocate the buffer to hold the samples */
-		s_data = malloc(h_in.dat_b);
+		s_data = (char *) malloc(h_in.dat_b);
 		/* fill out the header for the output files */
 		h_out.rif_a = h_in.rif_a;
 		h_out.rif_b = 0;
@@ -107,12 +105,10 @@ char *argv[];
 					s_buff += 1;
 				else
 					s_buff = 0;
-				if (s_buff >= SILENCE_BUFFER) {
+				if (s_buff >= SILENCE_BUFFER)
 					finished = TRUE;
-				}
-				if (i == (h_in.dat_b - 1)) {
+				if (i == (h_in.dat_b - 1))
 					finished = TRUE;
-				}
 				if (finished) {
 					h_out.dat_b -= (s_buff * h_in.fmt_g);
 					h_out.rif_b = 4 + (8 + h_out.fmt_b) + (8 + h_out.dat_b);
@@ -130,9 +126,8 @@ char *argv[];
 			}
 		}
 		fclose(fp_in);
-		if (fp_out != NULL) {
+		if (fp_out != NULL)
 			fclose(fp_out);
-		}
 		free(s_data);
 	}
 	else {
